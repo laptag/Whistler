@@ -2,32 +2,36 @@ from pydl.io.Data import Data, FileType
 from pydl.analysis import reduceResolution
 import matplotlib.pyplot as plt
 import matplotlib
+import numpy as np
+from scipy.fftpack import fft, ifft
+from scipy import signal
 from time import sleep
 
-from pydl._analysis.crossCorrelation import _staticCrossCorrelation
+from pydl.analysis import staticCrossCorrelation, extrema, lowFreqFilter
 
 i_file = "Data/C1-sweep-00000.txt"
 v_file = "Data/C3-sweep-00000.txt"
 
-# i = Data(i_file, filetype=FileType.csv)
+i = Data(i_file, filetype=FileType.csv)
 v = Data(v_file, filetype=FileType.csv)
 
-sample = v.data[100:1000]
+sample = lowFreqFilter(v.data[100:1000])
 large = 0
 large_a = 0
 large_b = 0
-d = 1
+d = 10
 
-# p = plt.plot(v.data[0:6000])
+p = plt.plot(lowFreqFilter(v.data[0:6000]))
+plt.plot(lowFreqFilter(i.data[0:6000], sigma=25))
 corr_data = []
 
 i = 1
 try:
-    while i < int(6000/d)+1:
-        a = 100+(d*i)
-        b = 1000+(d*i)
-        test = v.data[a:b]
-        res = _staticCrossCorrelation(reduceResolution(sample, 10), reduceResolution(test, 10))
+    while i < 6001:
+        a = 100+(i)
+        b = 1000+(i)
+        test = lowFreqFilter(v.data[a:b])
+        res = staticCrossCorrelation(sample, test)
 
         if (res > large):
             large = res
@@ -36,26 +40,38 @@ try:
 
         corr_data.append(res)
         # plt.title(str(res))
-
+        #
         # if (i == 1):
         #     line, = plt.plot(range(a, b), sample, "g")
-        # else:
+        #     corr_line, = plt.plot(corr_data)
+        #     plt.pause(0.0001)
+        # elif (i % d == 0):
         #     line.set_data(range(a, b), sample)
+        #     corr_line.set_data(range(len(corr_data)), corr_data)
+        #     plt.pause(0.0001)
         #
         # if (res > 0.95):
-        #     print(res, a, b)
+        #     # print(res, a, b)
         #     line.set_color("r")
         # else:
         #     line.set_color("g")
-        #
-        # plt.pause(0.01)
+
         i += 1
 except KeyboardInterrupt:
     print("\nKilling")
 
-plt.plot(corr_data)
-plt.plot(v.data[0:6000])
+print("largest", large, large_a, large_b)
+
+# plt.plot(corr_data, "g")
+# plt.plot(100 * np.diff(lowFreqFilter(corr_data[0:6000])), "r")
+
+# xs = extrema(corr_data[0:6000])
+# print(xs)
+#
+# for x in xs:
+#     if x < 0: # minimum
+#         plt.plot(abs(x), corr_data[abs(x)], "co")
+
+
 plt.show()
 plt.close()
-
-print("largest", large, large_a, large_b)
